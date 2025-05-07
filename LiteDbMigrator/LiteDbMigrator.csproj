@@ -1,13 +1,33 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <!--<TargetFramework>net9.0</TargetFramework>-->
+	  <TargetFramework>netstandard2.0</TargetFramework>
+    <!--<ImplicitUsings>enable</ImplicitUsings>-->
+    <!--<Nullable>enable</Nullable>-->
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Title>LiteDb Migrator</Title>
+    <Authors>Alemik</Authors>
+    <Company>Alemik</Company>
+    <Description>Lightweight and intuitive library for migrating collections and documents in LiteDB.</Description>
+    <RepositoryUrl>https://github.com/alemik/LiteDbMigratorSln</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>First release</PackageReleaseNotes>
+    <PackageLicenseExpression> MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LiteDB" Version="5.0.21" />
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
+
+
+    <ItemGroup>
+      <PackageReference Include="LiteDB" Version="5.0.21" />
+    </ItemGroup>
+
 
 </Project>

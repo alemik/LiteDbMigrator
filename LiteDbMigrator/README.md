@@ -1,3 +1,7 @@
+# Disclaimer: 
+This library is currently under development. Use at your own risk and always ensure a backup of your database before use. The authors disclaim any liability for data loss or damage.
+
+
 # LiteDbMigrator: Come Funziona `Migrator.cs`
 
 Il file `Migrator.cs` contiene una classe chiamata `Migrator` progettata per gestire le migrazioni di schema in un database LiteDB. Questa classe consente di rinominare collezioni, campi e applicare trasformazioni ai documenti o ai sotto-documenti. Di seguito viene fornita una spiegazione dettagliata del funzionamento.
