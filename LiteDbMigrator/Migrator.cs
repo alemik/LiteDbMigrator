@@ -41,6 +41,7 @@ namespace LiteDbMigrator
             // Copia i documenti dalla vecchia collezione a quella nuova
             foreach (var doc in oldCol.FindAll())
             {
+                //TODO inserire con InsertBulk
                 newCol.Insert(doc);
             }
 
