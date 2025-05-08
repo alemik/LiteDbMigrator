@@ -263,4 +263,245 @@ public class LiteDbMigratorTests
         var oldColExists = db.CollectionExists(oldCollectionName);
         Assert.False(oldColExists);
     }
+
+    [Fact]
+    public void Migrate_Field_In_Nested_Document()
+    {
+        // Setup
+        var dbPath = "TestNestedDocs.db";
+        if (File.Exists(dbPath)) File.Delete(dbPath);
+
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var col = db.GetCollection("people");
+            col.Insert(new BsonDocument
+            {
+                ["Name"] = "Mario",
+                ["Address"] = new BsonDocument
+                {
+                    ["Street"] = "Via Roma",
+                    ["City"] = "Torino"
+                }
+            });
+        }
+
+        // Act - apply migration
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var migrator = new Migrator(db, schemaVersion: 1);
+            migrator
+                .Collection("people")
+                .Document("Address", d =>
+                    d.Field("Street", "Via"));
+
+            migrator.Execute();
+        }
+
+        // Assert
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var col = db.GetCollection("people");
+            var person = col.FindAll().First();
+
+            Assert.False(person["Address"].AsDocument.ContainsKey("Street"));
+            Assert.True(person["Address"].AsDocument.ContainsKey("Via"));
+            Assert.Equal("Via Roma", person["Address"]["Via"]);
+        }
+
+        File.Delete(dbPath);
+    }
+
+    [Fact]
+    public void Migrate_Field_In_Deeply_Nested_Documents()
+    {
+        // Setup
+        var dbPath = "NestedLevels.db";
+        if (File.Exists(dbPath)) File.Delete(dbPath);
+
+        // Inserimento dati
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var col = db.GetCollection("states");
+            col.Insert(new BsonDocument
+            {
+                ["Name"] = "Stato A",
+                ["Region"] = new BsonDocument
+                {
+                    ["Name"] = "Regione 1",
+                    ["Province"] = new BsonDocument
+                    {
+                        ["Name"] = "Provincia 1",
+                        ["Municipality"] = new BsonDocument
+                        {
+                            ["OldField"] = "Da Rinominare"
+                        }
+                    }
+                }
+            });
+        }
+
+        // Act
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var migrator = new Migrator(db, schemaVersion: 1);
+
+            migrator
+                .Collection("states")
+                .Document("Region", region =>
+                    region.Document("Province", province =>
+                        province.Document("Municipality", municipality =>
+                            municipality.Field("OldField", "NewField")
+                        )
+                    )
+                );
+
+            migrator.Execute();
+        }
+
+        // Assert
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var state = db.GetCollection("states").FindAll().First();
+            var region = state["Region"].AsDocument;
+            var province = region["Province"].AsDocument;
+            var municipality = province["Municipality"].AsDocument;
+
+            Assert.False(municipality.ContainsKey("OldField"));
+            Assert.True(municipality.ContainsKey("NewField"));
+            Assert.Equal("Da Rinominare", municipality["NewField"]);
+        }
+
+        File.Delete(dbPath);
+    }
+
+
+    [Fact]
+    public void Migrate_Field_In_Deeply_Nested_Arrays()
+    {
+        var dbPath = "NestedArrays.db";
+        if (File.Exists(dbPath)) File.Delete(dbPath);
+
+        // Inserimento iniziale
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var col = db.GetCollection("states");
+            col.Insert(new BsonDocument
+            {
+                ["Name"] = "Stato A",
+                ["Regions"] = new BsonArray
+            {
+                new BsonDocument
+                {
+                    ["Name"] = "Regione 1",
+                    ["Provinces"] = new BsonArray
+                    {
+                        new BsonDocument
+                        {
+                            ["Name"] = "Provincia 1",
+                            ["Municipalities"] = new BsonArray
+                            {
+                                new BsonDocument
+                                {
+                                    ["OldField"] = "Da Rinominare"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            });
+        }
+
+        // Migrazione
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var migrator = new Migrator(db, schemaVersion: 1);
+
+            migrator
+                .Collection("states")
+                .Array("Regions", region =>
+                    region.Array("Provinces", province =>
+                        province.Array("Municipalities", municipality =>
+                            municipality.Field("OldField", "NewField")
+                        )
+                    )
+                );
+
+            migrator.Execute();
+        }
+
+        // Verifica
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var state = db.GetCollection("states").FindAll().First();
+            var region = state["Regions"].AsArray[0].AsDocument;
+            var province = region["Provinces"].AsArray[0].AsDocument;
+            var municipality = province["Municipalities"].AsArray[0].AsDocument;
+
+            Assert.False(municipality.ContainsKey("OldField"));
+            Assert.True(municipality.ContainsKey("NewField"));
+            Assert.Equal("Da Rinominare", municipality["NewField"]);
+        }
+
+        File.Delete(dbPath);
+    }
+
+
+    [Fact]
+    public void Migrate_Field_In_Document_Inside_Document_Inside_Array()
+    {
+        var dbPath = "DocumentInDocInArray.db";
+        if (File.Exists(dbPath)) File.Delete(dbPath);
+
+        // Inserimento iniziale
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var col = db.GetCollection("roots");
+            col.Insert(new BsonDocument
+            {
+                ["Name"] = "Root",
+                ["Items"] = new BsonArray
+            {
+                new BsonDocument
+                {
+                    ["Metadata"] = new BsonDocument
+                    {
+                        ["OldKey"] = "Valore da migrare"
+                    }
+                }
+            }
+            });
+        }
+
+        // Migrazione
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var migrator = new Migrator(db, schemaVersion: 1);
+
+            migrator
+                .Collection("roots")
+                .Array("Items", item =>
+                    item.Document("Metadata", meta =>
+                        meta.Field("OldKey", "NewKey")
+                    )
+                );
+
+            migrator.Execute();
+        }
+
+        // Verifica
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var root = db.GetCollection("roots").FindAll().First();
+            var item = root["Items"].AsArray[0].AsDocument;
+            var metadata = item["Metadata"].AsDocument;
+
+            Assert.False(metadata.ContainsKey("OldKey"));
+            Assert.True(metadata.ContainsKey("NewKey"));
+            Assert.Equal("Valore da migrare", metadata["NewKey"]);
+        }
+
+        File.Delete(dbPath);
+    }
+
 }

@@ -87,6 +87,19 @@ namespace LiteDbMigrator
             return this;
         }
 
+        public CollectionMigrator Document(string fieldName, Action<DocumentMigrator> action)
+        {
+            _migrations.Add(doc =>
+            {
+                if (doc[fieldName] is BsonDocument subDoc)
+                {
+                    var migrator = new DocumentMigrator(subDoc);
+                    action(migrator);
+                }
+            });
+            return this;
+        }
+
         public CollectionMigrator Array(string arrayName, Action<DocumentMigrator> itemAction)
         {
             _migrations.Add(doc =>
@@ -137,6 +150,16 @@ namespace LiteDbMigrator
             {
                 _doc[newName] = _doc[oldName];
                 _doc.Remove(oldName);
+            }
+            return this;
+        }
+
+        public DocumentMigrator Document(string fieldName, Action<DocumentMigrator> action)
+        {
+            if (_doc.ContainsKey(fieldName) && _doc[fieldName] is BsonDocument subDoc)
+            {
+                var migrator = new DocumentMigrator(subDoc);
+                action(migrator);
             }
             return this;
         }
