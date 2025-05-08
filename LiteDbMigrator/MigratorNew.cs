@@ -5,49 +5,36 @@ using System.Linq;
 
 namespace LiteDbMigrator
 {
-    public class Migrator
+    public class MigratorNew
     {
         private readonly LiteDatabase _db;
-        private readonly int schemaVersion;
 
-        public Migrator(LiteDatabase db, int schemaVersion)
+        public MigratorNew(LiteDatabase db)
         {
             _db = db;
-            this.schemaVersion = schemaVersion;
         }
 
-        public CollectionMigrator Collection(string name, string newName = null)
+        public CollectionMigratorNew Collection(string name, string newName = null)
         {
-            return new CollectionMigrator(_db, name, newName);
+            return new CollectionMigratorNew(_db, name, newName);
         }
     }
 
-    public class CollectionMigrator
+    public class CollectionMigratorNew
     {
         private readonly LiteDatabase _db;
-        private string _oldName;
-        private string _newName;
+        private readonly string _oldName;
+        private readonly string _newName;
         private readonly List<Action<BsonDocument>> _migrations = new List<Action<BsonDocument>>();
 
-        public CollectionMigrator(LiteDatabase db, string oldName, string newName)
+        public CollectionMigratorNew(LiteDatabase db, string oldName, string newName)
         {
             _db = db;
             _oldName = oldName;
             _newName = newName;
         }
 
-        private void RenameCollectionInternal()
-        {
-            var oldCol = _db.GetCollection(_oldName);
-            var newCol = _db.GetCollection(_newName);
-
-            newCol.InsertBulk(oldCol.FindAll());
-
-            _db.DropCollection(_oldName);
-            _oldName = _newName;
-        }
-
-        public CollectionMigrator Field(string oldName, string newName = null)
+        public CollectionMigratorNew Field(string oldName, string newName = null)
         {
             _migrations.Add(doc =>
             {
@@ -60,7 +47,7 @@ namespace LiteDbMigrator
             return this;
         }
 
-        public CollectionMigrator Array(string arrayName, Action<DocumentMigrator> itemAction)
+        public CollectionMigratorNew Array(string arrayName, Action<DocumentMigratorNew> itemAction)
         {
             _migrations.Add(doc =>
             {
@@ -68,7 +55,7 @@ namespace LiteDbMigrator
                 {
                     foreach (var item in array.OfType<BsonDocument>())
                     {
-                        var migrator = new DocumentMigrator(item);
+                        var migrator = new DocumentMigratorNew(item);
                         itemAction(migrator);
                     }
                 }
@@ -78,36 +65,32 @@ namespace LiteDbMigrator
 
         public void Execute()
         {
-            var currentVersion = (int)_db.Pragma("USER_VERSION").RawValue;
+            var source = _db.GetCollection(_oldName);
+            var target = _db.GetCollection(_newName);
 
-
-            if (_newName != null)
-            {
-                RenameCollectionInternal();
-            }
-
-            var col = _db.GetCollection(_oldName);
-
-            foreach (var doc in col.FindAll())
+            foreach (var doc in source.FindAll())
             {
                 foreach (var migration in _migrations)
                     migration(doc);
 
-                col.Upsert(doc);
+                target.Upsert(doc);
             }
+
+            if (_oldName != _newName)
+                _db.DropCollection(_oldName);
         }
     }
 
-    public class DocumentMigrator
+    public class DocumentMigratorNew
     {
         private readonly BsonDocument _doc;
 
-        public DocumentMigrator(BsonDocument doc)
+        public DocumentMigratorNew(BsonDocument doc)
         {
             _doc = doc;
         }
 
-        public DocumentMigrator Field(string oldName, string newName = null)
+        public DocumentMigratorNew Field(string oldName, string newName = null)
         {
             if (newName != null && _doc.ContainsKey(oldName))
             {
@@ -117,13 +100,13 @@ namespace LiteDbMigrator
             return this;
         }
 
-        public DocumentMigrator Array(string arrayName, Action<DocumentMigrator> itemAction)
+        public DocumentMigratorNew Array(string arrayName, Action<DocumentMigratorNew> itemAction)
         {
             if (_doc[arrayName] is BsonArray array)
             {
                 foreach (var item in array.OfType<BsonDocument>())
                 {
-                    var migrator = new DocumentMigrator(item);
+                    var migrator = new DocumentMigratorNew(item);
                     itemAction(migrator);
                 }
             }

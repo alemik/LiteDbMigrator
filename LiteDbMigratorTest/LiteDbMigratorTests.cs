@@ -27,10 +27,10 @@ public class LiteDbMigratorTests
         var migrator = new Migrator(db);
         migrator
             .Collection("Persone")
-            .RenameField("Indirizzi", "Addresses")
-            .ForEachInArray("Addresses", sub =>
-                sub.RenameField("Via", "Street")
-                   .RenameField("CAP", "PostalCode")
+            .Field("Indirizzi", "Addresses")
+            .Array("Addresses", sub =>
+                sub.Field("Via", "Street")
+                   .Field("CAP", "PostalCode")
             )
             .Execute();
 
@@ -93,10 +93,10 @@ public class LiteDbMigratorTests
         var migrator = new Migrator(db);
         migrator
             .Collection("Persone")
-            .RenameField("Indirizzi", "Addresses")
-            .ForEachInArray("Addresses", sub =>
-                sub.RenameField("Via", "Street")
-                   .RenameField("CAP", "PostalCode")
+            .Field("Indirizzi", "Addresses")
+            .Array("Addresses", sub =>
+                sub.Field("Via", "Street")
+                   .Field("CAP", "PostalCode")
             )
             .Execute();
 
@@ -185,15 +185,15 @@ public class LiteDbMigratorTests
         var migrator = new Migrator(db);
         migrator
             .Collection("Stati")
-            .RenameField("Regioni", "Regions")
-            .ForEachInArray("Regions", region =>
-                region.RenameField("Citta", "Cities")
-                      .ForEachInArray("Cities", city =>
-                          city.RenameField("Comuni", "Municipalities")
-                              .ForEachInArray("Municipalities", municipality =>
-                                  municipality.RenameField("Frazioni", "Districts")
-                                              .ForEachInArray("Districts", district =>
-                                                  district.RenameField("Nome", "Name")
+            .Field("Regioni", "Regions")
+            .Array("Regions", region =>
+                region.Field("Citta", "Cities")
+                      .Array("Cities", city =>
+                          city.Field("Comuni", "Municipalities")
+                              .Array("Municipalities", municipality =>
+                                  municipality.Field("Frazioni", "Districts")
+                                              .Array("Districts", district =>
+                                                  district.Field("Nome", "Name")
                                               )
                               )
                       )
@@ -244,8 +244,7 @@ public class LiteDbMigratorTests
         // Act
         var migrator = new Migrator(db);
         migrator
-            .Collection(oldCollectionName)
-            .RenameCollection(newCollectionName)
+            .Collection(oldCollectionName, newCollectionName)
             .Execute();
 
         // Assert
