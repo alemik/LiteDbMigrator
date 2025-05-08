@@ -24,15 +24,16 @@ public class LiteDbMigratorTests
         col.Insert(persona);
 
         // Act
-        var migrator = new Migrator(db);
+        var migrator = new Migrator(db, 10);
         migrator
             .Collection("Persone")
             .Field("Indirizzi", "Addresses")
             .Array("Addresses", sub =>
                 sub.Field("Via", "Street")
                    .Field("CAP", "PostalCode")
-            )
-            .Execute();
+            );
+
+           migrator.Execute();
 
         // Assert
         var updated = col.FindAll().First();
@@ -90,15 +91,16 @@ public class LiteDbMigratorTests
         col.InsertBulk(persone);
 
         // Act
-        var migrator = new Migrator(db);
+        var migrator = new Migrator(db, 10);
         migrator
             .Collection("Persone")
             .Field("Indirizzi", "Addresses")
             .Array("Addresses", sub =>
                 sub.Field("Via", "Street")
                    .Field("CAP", "PostalCode")
-            )
-            .Execute();
+            );
+        
+        migrator.Execute();
 
         // Assert
         var updatedDocs = col.FindAll().ToList();
@@ -182,7 +184,7 @@ public class LiteDbMigratorTests
         col.Insert(stato);
 
         // Act
-        var migrator = new Migrator(db);
+        var migrator = new Migrator(db, 10);
         migrator
             .Collection("Stati")
             .Field("Regioni", "Regions")
@@ -197,8 +199,9 @@ public class LiteDbMigratorTests
                                               )
                               )
                       )
-            )
-            .Execute();
+            );
+        
+        migrator.Execute();
 
         // Assert
         var updatedDoc = col.FindAll().First();
@@ -242,10 +245,11 @@ public class LiteDbMigratorTests
         oldCol.Insert(new BsonDocument { ["Nome"] = "Documento2" });
 
         // Act
-        var migrator = new Migrator(db);
+        var migrator = new Migrator(db, 10);
         migrator
-            .Collection(oldCollectionName, newCollectionName)
-            .Execute();
+            .Collection(oldCollectionName, newCollectionName);
+
+        migrator.Execute();
 
         // Assert
         var newCol = db.GetCollection(newCollectionName);

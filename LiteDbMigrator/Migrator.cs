@@ -9,6 +9,9 @@ namespace LiteDbMigrator
     {
         private readonly LiteDatabase _db;
         private readonly int schemaVersion;
+        private readonly List<CollectionMigrator> _collections = new List<CollectionMigrator>();
+
+        public int CurrentDbVersion => GetDbVersion(); 
 
         public Migrator(LiteDatabase db, int schemaVersion)
         {
@@ -18,7 +21,31 @@ namespace LiteDbMigrator
 
         public CollectionMigrator Collection(string name, string newName = null)
         {
-            return new CollectionMigrator(_db, name, newName);
+            var collectionMigrator = new CollectionMigrator(_db, name, newName);
+            _collections.Add(collectionMigrator);
+            return collectionMigrator;
+        }
+
+        public void SetDbVersion(int schemaVersion)
+        {
+            _db.Pragma("USER_VERSION", schemaVersion);
+        }
+
+        private int GetDbVersion()
+        {
+            return (int)_db.Pragma("USER_VERSION").RawValue;
+        }
+
+        public void Execute()
+        {
+            if (schemaVersion <= CurrentDbVersion) throw new Exception("Actual database version is newer than the one being applied");
+
+            foreach (var collection in _collections)
+            {
+                collection.Execute();
+            }
+
+            SetDbVersion(schemaVersion);
         }
     }
 
@@ -76,11 +103,8 @@ namespace LiteDbMigrator
             return this;
         }
 
-        public void Execute()
-        {
-            var currentVersion = (int)_db.Pragma("USER_VERSION").RawValue;
-
-
+        internal void Execute()
+        {         
             if (_newName != null)
             {
                 RenameCollectionInternal();

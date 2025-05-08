@@ -1,9 +1,10 @@
 ﻿using LiteDB;
+using LiteDbMigrator;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace LiteDbMigrator
+namespace LiteDbSchema
 {
     public class Schema
     {
@@ -30,7 +31,7 @@ namespace LiteDbMigrator
             foreach (var item in _schemes)
             {
                 var schema = item.Value.CollectionName;
-                updateCollection(db, schema);
+                //updateCollection(db, schema);
             }
         }
 
@@ -57,14 +58,15 @@ namespace LiteDbMigrator
         }
 
 
-        private void updateCollection(LiteDatabase db, string collectionName)
-        {
-            var migrator = new Migrator(db)
-                .Collection(collectionName)
-                .Field("Arrival", "SDate")
-                .Array("Places", sub => sub.Field("Arrival", "StartDate"))
-                .Array("Places", sub => sub.Field("Departure", "EndDate"));
-            migrator.Execute();
-        }
+        //private void updateCollection(LiteDatabase db, string collectionName)
+        //{
+        //    var migrator = new Migrator(db, 10)
+        //        .Collection(collectionName)
+        //        .Field("Arrival", "SDate")
+        //        .Array("Places", sub => sub.Field("Arrival", "StartDate"))
+        //        .Array("Places", sub => sub.Field("Departure", "EndDate"));
+
+        //    migrator.Execute();
+        //}
     }
 }

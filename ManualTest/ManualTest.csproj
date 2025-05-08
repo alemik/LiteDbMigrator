@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LiteDbMigrator\LiteDbMigrator.csproj" />
+    <ProjectReference Include="..\LiteDbSchema\LiteDbSchema.csproj" />
   </ItemGroup>
 
 </Project>

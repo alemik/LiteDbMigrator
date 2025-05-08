@@ -1,4 +1,4 @@
-﻿namespace LiteDbMigrator
+﻿namespace LiteDbSchema
 {
     public class FieldMapping
     {

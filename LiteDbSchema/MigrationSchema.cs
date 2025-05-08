@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace LiteDbMigrator
+namespace LiteDbSchema
 {
     public class MigrationSchema<T> : IMigrationSchema
     {

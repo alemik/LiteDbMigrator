@@ -1,6 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using LiteDB;
 using LiteDbMigrator;
+using LiteDbSchema;
 using ManualTest;
 
 
