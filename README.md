@@ -108,7 +108,7 @@ In some scenarios, you may want to manually set the database version (e.g., afte
 using (var db = new LiteDatabase("mydb.db"))
 {
     var migrator = new Migrator(db, schemaVersion: 1);
-    migrator.SetDbVersion(2); // sets USER_VERSION to 1 explicitly
+    migrator.SetDbVersion(2); // sets USER_VERSION to 2 explicitly
 }
 ```
 
