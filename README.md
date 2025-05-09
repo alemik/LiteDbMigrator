@@ -1,106 +1,125 @@
-# LiteDbMigrator: Come Funziona `Migrator.cs`
+# LiteDbMigrator - Usage Guide
 
-Il file `Migrator.cs` contiene una classe chiamata `Migrator` progettata per gestire le migrazioni di schema in un database LiteDB. Questa classe consente di rinominare collezioni, campi e applicare trasformazioni ai documenti o ai sotto-documenti. Di seguito viene fornita una spiegazione dettagliata del funzionamento.
+The `LiteDbMigrator` provides a fluent API for managing field and collection renaming in LiteDB documents, including nested structures like embedded documents and arrays.  
+Each migration is associated with a schema version that is stored in the database using the `USER_VERSION` pragma.
 
----
+## Schema Versioning
 
-## Struttura della Classe `Migrator`
+You must provide the target schema version when initializing the migrator. The system checks if the current version is outdated and, if so, applies the migration logic and updates the version.
 
-### **Campi Privati**
-- **`_db`**: Istanza del database LiteDB.
-- **`_dbPath`**: Percorso del file del database (utilizzato se non viene fornita un'istanza di `LiteDatabase`).
-- **`_collectionName`**: Nome della collezione su cui operare.
-- **`_newCollectionName`**: Nome della nuova collezione (se si desidera rinominare una collezione).
-- **`_migrations`**: Lista di azioni (trasformazioni) da applicare ai documenti della collezione.
-
-### **Costruttori**
-- **`Migrator(string dbPath)`**: Inizializza il migratore con il percorso del database.
-- **`Migrator(LiteDatabase db)`**: Inizializza il migratore con un'istanza di `LiteDatabase`.
-
----
-
-## Metodi Principali
-
-### **1. Gestione delle Collezioni**
-- **`Collection(string name)`**:
-  Specifica il nome della collezione su cui operare.
-
-- **`RenameCollection(string newCollectionName)`**:
-  Imposta un nuovo nome per la collezione e prepara il migratore per rinominare la collezione.
-
-- **`RenameCollectionInternal()`** *(privato)*:
-  - Copia tutti i documenti dalla collezione originale a una nuova collezione.
-  - Elimina la collezione originale.
-  - Aggiorna `_collectionName` con il nuovo nome.
-
----
-
-### **2. Migrazione dei Campi**
-- **`RenameField(string oldName, string newName)`**:
-  Aggiunge una trasformazione alla lista `_migrations` per rinominare un campo in ogni documento. Se il campo esiste:
-  - Copia il valore nel nuovo campo.
-  - Rimuove il campo originale.
-
----
-
-### **3. Gestione dei Sotto-Documenti**
-- **`ForEachInArray(string arrayField, Action<SubDocumentMigrator> config)`**:
-  - Targetizza un campo array in ogni documento.
-  - Itera su ogni sotto-documento nell'array e applica una trasformazione definita dall'utente utilizzando la classe `SubDocumentMigrator`.
-
----
-
-### **4. Esecuzione delle Migrazioni**
-- **`Execute()`**:
-  - Se è stato specificato un nuovo nome per la collezione, chiama `RenameCollectionInternal()` per rinominare la collezione.
-  - Recupera tutti i documenti della collezione.
-  - Applica tutte le trasformazioni definite in `_migrations` a ciascun documento.
-  - Aggiorna i documenti modificati nella collezione.
-
----
-
-## Classe `SubDocumentMigrator`
-
-La classe `SubDocumentMigrator` è un helper per gestire le trasformazioni sui sotto-documenti. Fornisce i seguenti metodi:
-
-- **`RenameField(string oldName, string newName)`**:
-  Rinomina un campo in un sotto-documento.
-
-- **`ForEachInArray(string fieldName, Action<SubDocumentMigrator> action)`**:
-  Itera su un array in un sotto-documento e applica trasformazioni a ciascun elemento.
-
----
-
-## Esempio di Utilizzo
-
-Ecco un esempio pratico di come utilizzare la classe `Migrator`:
 ```csharp
-var migrator = new Migrator("myDatabase.db") 
-	.Collection("Users") 
-	.RenameCollection("NewUsers")
-	.RenameField("oldField", "newField") 
-	.ForEachInArray("addresses", sub => sub.RenameField("oldStreet", "newStreet"));
+using (var db = new LiteDatabase("mydb.db"))
+{
+    var migrator = new Migrator(db, schemaVersion: 2);
+    
+    // define collections and migrations here
+    
+    migrator.Execute();
+}
+```
 
-migrator.Execute();
-``` 
- 
-### Cosa fa questo codice:
-1. Specifica la collezione `Users` come target.
-2. Rinomina il campo `oldField` in `newField` in ogni documento della collezione.
-3. Per ogni documento, rinomina il campo `oldStreet` in `newStreet` all'interno dell'array `addresses`.
-4. Applica tutte le modifiche al database.
+## Example Scenario
+Imagine a collection people with the following structure:
 
----
+```json
+{
+  "FirstName": "John",
+  "LastName": "Doe",
+  "Age": 30,
+  "Gender": "M",
+  "Address": {
+    "Street": "Main St",
+    "City": "New York",
+    "Zip": "10001",
+    "Country": "USA"
+  },
+  "Contacts": [
+    { "Type": "email", "Value": "john@example.com", "Verified": true, "Primary": true },
+    { "Type": "phone", "Value": "1234567890", "Verified": false, "Primary": false }
+  ]
+}
+```
 
-## Vantaggi del Design
+## Migration Goals
+FirstName → no change
 
-- **Composizione**: Le migrazioni possono essere definite in modo modulare e composito.
-- **Flessibilità**: Supporta trasformazioni sia a livello di documento che di sotto-documento.
-- **Sicurezza**: Le modifiche vengono applicate solo dopo aver eseguito `Execute()`.
+Rename LastName → FamilyName
 
----
+In Address: rename Street → Road, Zip → PostalCode
 
-## Conclusione
+In Contacts[]: rename Type → ContactType, Value → ContactValue
 
-La classe `Migrator` è uno strumento potente per gestire le migrazioni di schema in LiteDB. Grazie alla sua API fluida e alla possibilità di definire trasformazioni personalizzate, consente di aggiornare facilmente la struttura dei dati senza interventi manuali.
+```csharp
+using (var db = new LiteDatabase("mydb.db"))
+{
+    var migrator = new Migrator(db, schemaVersion: 2);
 
+    migrator
+        .Collection("people")
+            .Field("FirstName") // no change, useful for documentation
+            .Field("LastName", "FamilyName")
+            .Document("Address", address => 
+                address
+                    .Field("Street", "Road")
+                    .Field("Zip", "PostalCode")
+            )
+            .Array("Contacts", contact => 
+                contact
+                    .Field("Type", "ContactType")
+                    .Field("Value", "ContactValue")
+            );
+
+    migrator.Execute();
+}
+```
+
+After migration, each document in the people collection will be updated with the new field names while leaving untouched fields intact.
+
+
+## Migrating Multiple Collections and Renaming
+
+You can define migrations for multiple collections in a single migration step.
+
+You can also rename a collection by passing the new name as the second argument to .Collection().
+
+```csharp
+using (var db = new LiteDatabase("mydb.db"))
+{
+    var migrator = new Migrator(db, schemaVersion: 3);
+
+    migrator
+        .Collection("people", "users")
+            .Field("FirstName", "GivenName");
+
+    migrator
+        .Collection("orders", "purchases")
+            .Field("TotalAmount", "Amount")
+            .Document("Shipping", ship => 
+                ship.Field("ZipCode", "PostalCode")
+            );
+
+    migrator.Execute();
+}
+```
+
+## Manually Setting the User Version
+In some scenarios, you may want to manually set the database version (e.g., after a manual migration or when initializing a fresh schema):
+```csharp
+using (var db = new LiteDatabase("mydb.db"))
+{
+    var migrator = new Migrator(db, schemaVersion: 1);
+    migrator.SetDbVersion(2); // sets USER_VERSION to 1 explicitly
+}
+```
+
+## ⚠️ Important Notes
+The migration is only applied if the database version is older than the target schema version.
+
+Nested documents and arrays are handled recursively using .Document() and .Array().
+
+If the newName parameter is omitted, the field name remains unchanged.
+
+## Disclaimer:
+This library is currently under development. 
+
+Use at your own risk and always ensure a backup of your database before use. The authors disclaim any liability for data loss or damage.
