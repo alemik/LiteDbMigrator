@@ -504,4 +504,52 @@ public class LiteDbMigratorTests
         File.Delete(dbPath);
     }
 
+    [Fact]
+    public void Test_MigrationV1_RenamesFields()
+    {
+        var dbPath = "Test.db";
+        if (File.Exists(dbPath)) File.Delete(dbPath);
+
+        // Setup: crea il database iniziale
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var col = db.GetCollection("people");
+            col.Insert(new BsonDocument
+            {
+                ["_id"] = 1,
+                ["first_name"] = "Alice",
+                ["last_name"] = "Smith",
+                ["age"] = 30
+            });
+
+            db.Pragma("USER_VERSION", 0);
+        }
+
+        // Esegue la migrazione usando Apply<T>()
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var migrator = new Migrator(db, 2);
+            migrator
+                .Apply<MigrationV1>()
+                .Apply<MigrationV2>()
+                .Execute();
+        }
+
+        // Verifica
+        using (var db = new LiteDatabase(dbPath))
+        {
+            var col = db.GetCollection("people");
+            var person = col.FindById(1);
+
+            Assert.True(person.ContainsKey("Nome"));
+            Assert.True(person.ContainsKey("Cognome"));
+            Assert.False(person.ContainsKey("first_name"));
+            Assert.False(person.ContainsKey("last_name"));
+            Assert.Equal(30, person["age"].AsInt32);
+
+            Assert.Equal(2, db.Pragma("USER_VERSION").AsInt32);
+        }
+
+        File.Delete(dbPath);
+    }
 }
