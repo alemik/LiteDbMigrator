@@ -112,6 +112,68 @@ using (var db = new LiteDatabase("mydb.db"))
 }
 ```
 
+## Using Migrations with Versioning
+
+To define a database schema migration, implement the IMigration interface:
+```csharp
+public class MigrationV1 : IMigration
+{
+    public int Version => 1;
+
+    public void Define(Migrator migrator)
+    {
+        migrator.Collection("Travels")
+            .Field("OldName", "NewName");
+
+        migrator.Collection("Places")
+            .Field("OldLocation", "NewLocation");
+    }
+}
+```
+
+```csharp
+public class MigrationV2 : IMigration
+{
+    public int Version => 2;
+
+    public void Define(Migrator migrator)
+    {
+        migrator.Collection("Travels")
+            .Field("NewName", "Name");
+
+        migrator.Collection("Places")
+            .Field("NewLocation", "Location");
+    }
+}
+```
+
+You can then apply one or more migrations like this:
+```csharp
+using var db = new LiteDatabase(dbPath);
+
+new Migrator(db, latestVersion)
+    .Apply<MigrationV1>()
+    .Apply<MigrationV2>() // each migration must have a higher Version
+    .Execute();
+```
+
+Each migration is versioned and only applied if its version is greater than the current database version (tracked in USER_VERSION). This allows incremental, deterministic upgrades.
+
+✅ Advantages of this approach
+You can deploy updated application versions without worrying about the client's current database structure.
+
+Migrations are declarative, modular, and version-aware.
+
+The Migrator ensures that migrations are applied only once, in version order.
+
+You can update multiple collections, nested documents, and arrays.
+
+Existing distributed applications will upgrade their local database schema automatically on startup.
+
+This strategy is particularly useful for apps using LiteDB locally, such as mobile or desktop applications.
+
+
+
 ## ⚠️ Important Notes
 The migration is only applied if the database version is older than the target schema version.
 

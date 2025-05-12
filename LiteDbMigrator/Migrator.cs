@@ -36,6 +36,19 @@ namespace LiteDbMigrator
             return (int)_db.Pragma("USER_VERSION").RawValue;
         }
 
+        public Migrator Apply<T>() where T : IMigration, new()
+        {
+            var instance = new T();
+
+            if (instance.Version <= CurrentDbVersion)
+            {
+                return this;
+            }
+
+            instance.Define(this);
+            return this;
+        }
+
         public void Execute()
         {
             if (schemaVersion <= CurrentDbVersion) throw new Exception("Actual database version is newer than the one being applied");
