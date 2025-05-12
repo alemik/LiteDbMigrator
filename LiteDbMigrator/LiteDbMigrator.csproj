@@ -12,12 +12,12 @@
     <Description>Lightweight and intuitive library for migrating collections and documents in LiteDB.</Description>
     <RepositoryUrl>https://github.com/alemik/LiteDbMigratorSln</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageReleaseNotes>Improved usability</PackageReleaseNotes>
+    <PackageReleaseNotes>Added migrations</PackageReleaseNotes>
     <PackageLicenseExpression> MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageProjectUrl>https://www.nuget.org/packages/LiteDbMigrator/</PackageProjectUrl>
     <PackageTags>LiteDb; Document Migration</PackageTags>
-    <Version>2.0.0</Version>
+    <Version>2.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
