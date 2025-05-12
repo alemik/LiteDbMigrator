@@ -62,12 +62,14 @@ namespace LiteDbMigrator
         }
     }
 
+    /*
     public class CollectionMigrator
     {
         private readonly LiteDatabase _db;
         private string _oldName;
         private string _newName;
         private readonly List<Action<BsonDocument>> _migrations = new List<Action<BsonDocument>>();
+        private readonly List<FieldMigration> _fieldMigrations = new List<FieldMigration>();
 
         public CollectionMigrator(LiteDatabase db, string oldName, string newName)
         {
@@ -85,6 +87,12 @@ namespace LiteDbMigrator
 
             _db.DropCollection(_oldName);
             _oldName = _newName;
+        }
+
+        public CollectionMigrator Field(string oldName, string newName = null, Func<BsonValue, BsonValue> converter = null)
+        {
+            _fieldMigrations.Add(new FieldMigration(oldName, newName, converter));
+            return this;
         }
 
         public CollectionMigrator Field(string oldName, string newName = null)
@@ -140,6 +148,9 @@ namespace LiteDbMigrator
 
             foreach (var doc in col.FindAll())
             {
+                foreach (var field in _fieldMigrations)
+                    field.Apply(doc);
+
                 foreach (var migration in _migrations)
                     migration(doc);
 
@@ -155,6 +166,13 @@ namespace LiteDbMigrator
         public DocumentMigrator(BsonDocument doc)
         {
             _doc = doc;
+        }
+
+        public DocumentMigrator Field(string oldName, string newName = null, Func<BsonValue, BsonValue> converter = null)
+        {
+            var migration = new FieldMigration(oldName, newName, converter);
+            migration.Apply(_doc);
+            return this;
         }
 
         public DocumentMigrator Field(string oldName, string newName = null)
@@ -190,5 +208,60 @@ namespace LiteDbMigrator
             return this;
         }
     }
+    */
 
+    /*
+    public class FieldMigrator
+    {
+        public string OldName { get; }
+        public string NewName { get; }
+        public Func<BsonValue, BsonValue> Converter { get; }
+
+        public FieldMigrator(string oldName, string newName, Func<BsonValue, BsonValue> converter = null)
+        {
+            OldName = oldName;
+            NewName = newName ?? oldName;
+            Converter = converter;
+        }
+
+        public void Apply(BsonDocument doc)
+        {
+            if (doc.ContainsKey(OldName))
+            {
+                var value = doc[OldName];
+                if (Converter != null)
+                    value = Converter(value);
+
+                doc[NewName] = value;
+                if (OldName != NewName)
+                    doc.Remove(OldName);
+            }
+        }
+    }
+    */
+
+    /*
+    public static class FieldConverters
+    {
+        public static readonly Func<BsonValue, BsonValue> FromIntToDecimal = bv =>
+        {
+            if (bv.IsInt32) return new BsonValue(Convert.ToDecimal(bv.AsInt32));
+            if (bv.IsDecimal) return bv;
+            return new BsonValue(0.0m); // fallback
+        };
+
+        public static readonly Func<BsonValue, BsonValue> FromDecimalToInt = bv =>
+        {
+            if (bv.IsDecimal) return new BsonValue((int)Math.Round(bv.AsDecimal));
+            if (bv.IsInt32) return bv;
+            return new BsonValue(0); // fallback
+        };
+
+        public static readonly Func<BsonValue, BsonValue> ToString = bv =>
+        {
+            var val = bv.RawValue.ToString();
+            return val;
+        };
+    }
+    */
 }
